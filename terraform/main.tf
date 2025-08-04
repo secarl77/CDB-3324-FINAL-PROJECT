@@ -131,12 +131,12 @@ ingress {
 
 # 8. EC2 Instance for webapp
 resource "aws_instance" "CDB_3375_jenkins-instance" {
-  ami           = "ami-0bee12a638c7a8942" # Update to your preferred AMI ID
-  instance_type = "t2.medium"
+  ami           = var.ami_id # Update to your preferred AMI ID
+  instance_type = var.instance_type
   subnet_id     = aws_subnet.CDB_3375_subnet_1.id
   vpc_security_group_ids = [aws_security_group.SG-CDB-3375-final-project.id] # Use vpc_security_group_ids instead of security_groups
 
-  key_name      = "CDB-3375-final-project" # Update to your EC2 key pair
+  key_name      = var.key_name # Update to your EC2 key pair
 
   tags = {
     Name = "CDB-3375-final-project-jenkins-instance"
@@ -145,12 +145,12 @@ resource "aws_instance" "CDB_3375_jenkins-instance" {
 
 #9. EC2 Instance for DevOps services
 resource "aws_instance" "CDB_3375_devops-tools-instance" {
-  ami           = "ami-0bee12a638c7a8942" # Update to your preferred AMI ID
-  instance_type = "t2.medium"
+  ami           = var.ami_id # Update to your preferred AMI ID
+  instance_type = var.instance_type
   subnet_id     = aws_subnet.CDB_3375_subnet_1.id
   vpc_security_group_ids = [aws_security_group.SG-CDB-3375-final-project.id] # Use vpc_security_group_ids instead of security_groups
 
-  key_name      = "CDB-3375-final-project" # Update to your EC2 key pair
+  key_name      = var.key_name # Update to your EC2 key pair
 
   tags = {
     Name = "CDB-3375-final-project-devops-tools-instance"
@@ -159,14 +159,30 @@ resource "aws_instance" "CDB_3375_devops-tools-instance" {
 
 #10. EC2 Instance for DevOps services
 resource "aws_instance" "CDB_3375_webapp-instance" {
-  ami           = "ami-0bee12a638c7a8942" # Update to your preferred AMI ID
-  instance_type = "t2.medium"
+  ami           = var.ami_id # Update to your preferred AMI ID
+  instance_type = var.instance_type
   subnet_id     = aws_subnet.CDB_3375_subnet_1.id
   vpc_security_group_ids = [aws_security_group.SG-CDB-3375-final-project.id] # Use vpc_security_group_ids instead of security_groups
 
-  key_name      = "CDB-3375-final-project" # Update to your EC2 key pair
+  key_name      = var.key_name # Update to your EC2 key pair
 
   tags = {
     Name = "CDB-3375-final-project-webapp-instance"
   }
+}
+
+#11 Ansible Template
+data "template_file" "inventory" {
+  template = file("${path.module}/inventory.ini.tpl")
+
+  vars = {
+    devops-tool-ip  = aws_instance.CDB_3375_devops-tools-instance.public_ip
+    jenkins-ip = aws_instance.CDB_3375_jenkins-instance.public_ip
+    webapp-ip  = aws_instance.CDB_3375_webapp-instance.public_ip
+  }
+}
+
+resource "local_file" "inventory" {
+  content  = data.template_file.inventory.rendered
+  filename = "${path.module}/../ansible/inventory.ini"
 }
