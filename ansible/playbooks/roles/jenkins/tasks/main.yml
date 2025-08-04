@@ -1,0 +1,133 @@
+- name: Instalar Java
+  apt:
+    name: openjdk-17-jdk
+    update_cache: yes
+    state: present
+
+- name: Descargar clave GPG de Jenkins
+  get_url:
+      url: https://pkg.jenkins.io/debian/jenkins.io.key
+      dest: /usr/share/keyrings/jenkins-keyring.asc
+      mode: '0644'
+
+- name: Agregar repositorio Jenkins con signed-by
+  copy:
+    dest: /etc/apt/sources.list.d/jenkins.list
+    content: |
+      deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/
+    mode: '0644'
+
+- name: Actualizar índice de paquetes
+  apt:
+    update_cache: yes
+
+- name: Instalar Jenkins
+  apt:
+    name: jenkins
+    state: present
+
+- name: Asegurar permisos correctos en carpetas de Jenkins
+  file:
+    path: "{{ item }}"
+    owner: jenkins
+    group: jenkins
+    recurse: yes
+  loop:
+    - /var/log/jenkins
+    - /var/lib/jenkins
+    - /var/cache/jenkins
+
+- name: Iniciar Jenkins
+  service:
+      name: jenkins
+      state: started
+      enabled: yes
+
+- name: Crear directorio para scripts de inicialización
+  file:
+    path: /var/lib/jenkins/init.groovy.d
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: '0755'
+
+- name: Copiar script Groovy para crear usuario admin
+  copy:
+    src: create-admin.groovy
+    dest: /var/lib/jenkins/init.groovy.d/create-admin.groovy
+    owner: jenkins
+    group: jenkins
+    mode: '0644'
+
+
+- name: Copiar archivo plugins.txt
+  copy:
+    src: plugins.txt
+    dest: /var/lib/jenkins/plugins.txt
+    owner: jenkins
+    group: jenkins
+    mode: '0644'
+
+- name: Crear script Groovy para credencial GitHub
+  template:
+    src: create_github_creds.groovy.j2
+    dest: /var/lib/jenkins/init.groovy.d/create_github_creds.groovy
+    owner: jenkins
+    group: jenkins
+    mode: '0755'
+
+- name: Descargar jenkins-plugin-cli
+  get_url:
+    url: https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/2.13.2/jenkins-plugin-manager-2.13.2.jar
+    dest: /usr/local/bin/jenkins-plugin-manager.jar
+    mode: '0755'
+
+- name: Instalar plugins con jenkins-plugin-cli
+  command: >
+    java -jar /usr/local/bin/jenkins-plugin-manager.jar
+    --war /usr/share/java/jenkins.war
+    --plugin-file /var/lib/jenkins/plugins.txt
+    --plugin-download-directory /var/lib/jenkins/plugins
+
+- name: Omitir el asistente de instalación de Jenkins
+  copy:
+     content: "2.516.1"
+     dest: /var/lib/jenkins/jenkins.install.InstallUtil.lastExecVersion
+     owner: jenkins
+     group: jenkins
+     mode: '0644'
+
+- name: Omitir el upgrade wizard
+  copy:
+     content: "2.516.1"
+     dest: /var/lib/jenkins/jenkins.install.UpgradeWizard.state
+     owner: jenkins
+     group: jenkins
+     mode: '0644'
+
+- name: Copiar job-config.xml
+  copy:
+    src: files/job-config.xml
+    dest: /tmp/job-config.xml
+    mode: '0644'
+
+- name: Descargar jenkins-cli.jar desde el Jenkins en ejecución
+  get_url:
+    url: "{{ jenkins_url }}/jnlpJars/jenkins-cli.jar"
+    dest: "{{ jenkins_cli_jar_path }}"
+    mode: '0755'
+    force: yes
+
+
+- name: Crear job Jenkins con autenticación
+  shell: |
+    java -jar {{ jenkins_cli_jar_path }} \
+    -s {{ jenkins_url }} \
+    -auth {{ jenkins_user }}:{{ jenkins_password }} \
+    create-job {{ job_name }} < /tmp/job-config.xml
+
+- name: Reiniciar Jenkins para aplicar el script
+  systemd:
+    name: jenkins
+    state: restarted
+

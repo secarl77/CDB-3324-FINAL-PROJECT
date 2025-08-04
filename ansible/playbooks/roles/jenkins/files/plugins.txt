@@ -1,0 +1,10 @@
+git
+workflow-aggregator
+ansible
+matrix-auth
+credentials
+ssh-slaves
+blueocean
+docker-plugin
+pipeline-stage-view
+pipeline-model-definition

@@ -1,0 +1,22 @@
+import jenkins.model.*
+import com.cloudbees.plugins.credentials.*
+import com.cloudbees.plugins.credentials.domains.*
+import com.cloudbees.plugins.credentials.impl.*
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider
+
+def instance = Jenkins.getInstance()
+
+def credentials_store = SystemCredentialsProvider.getInstance().getStore()
+
+def github_token = new UsernamePasswordCredentialsImpl(
+    CredentialsScope.GLOBAL,
+    "{{ github_cred_id }}", // ID que usarás en los jobs
+    "GitHub token added by Groovy init script",
+    "{{ github_username }}",       // tu usuario GitHub
+    "{{ github_token }}"           // tu token personal de GitHub
+)
+
+credentials_store.addCredentials(Domain.global(), github_token)
+
+instance.save()
+

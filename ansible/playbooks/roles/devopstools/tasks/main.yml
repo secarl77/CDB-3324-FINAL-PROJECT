@@ -1,0 +1,20 @@
+- name: Installing basic dependencies od python
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    state: present
+  loop:
+    - python3
+    - python3-pip
+
+- name: Install Chromium
+  apt:
+    name: chromium-browser
+    update_cache: yes
+    state: present
+
+- name: Install Selenium for Python3
+  apt:
+    name: python3-selenium
+    update_cache: yes
+    state: present

@@ -1,0 +1,32 @@
+<project>
+  <actions/>
+  <description>Proyecto automatizado con GitHub y Jenkinsfile</description>
+  <scm class="hudson.plugins.git.GitSCM" plugin="git@latest">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>https://github.com/secarl77/CDB-3324-FINAL-PROJECT</url>
+        <credentialsId>github-creds</credentialsId>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/main</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <submoduleCfg class="list"/>
+    <extensions/>
+  </scm>
+
+  <triggers>
+    <com.cloudbees.jenkins.GitHubPushTrigger plugin="github@latest">
+      <spec></spec>
+    </com.cloudbees.jenkins.GitHubPushTrigger>
+  </triggers>
+
+  <builders/>
+  <publishers/>
+  <buildWrappers/>
+</project>
+
