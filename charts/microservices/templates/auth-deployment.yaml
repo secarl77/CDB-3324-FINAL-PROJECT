@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: {{ .Values.images.auth }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: DB_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: DB_NAME
+              value: {{ .Values.postgres.db | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SECRET_KEY
+          ports:
+            - containerPort: 5000
+

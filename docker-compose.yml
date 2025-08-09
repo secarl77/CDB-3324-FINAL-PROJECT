@@ -1,0 +1,59 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: DevOps2024*
+      POSTGRES_DB: webappdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - micro-net
+
+  user-service:
+    build: ./user-service
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: DevOps2024*
+      DB_NAME: webappdb
+      SECRET_KEY: supersecret!change
+    depends_on:
+      - postgres
+    ports:
+      - "5000:5000"
+    networks:
+      - micro-net
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: DevOps2024*
+      DB_NAME: webappdb
+      SECRET_KEY: supersecret!change
+    depends_on:
+      - postgres
+    ports:
+      - "5001:5000"
+    networks:
+      - micro-net
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - auth-service
+      - user-service
+    ports:
+      - "8081:80"
+    networks:
+      - micro-net
+
+volumes:
+  postgres_data:
+
+networks:
+  micro-net:
+

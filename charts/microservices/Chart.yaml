@@ -1,0 +1,5 @@
+apiVersion: v2
+name: microservices
+description: 3-service microservices app
+version: 0.1.0
+

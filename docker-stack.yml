@@ -1,0 +1,64 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: webappdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - micro-net
+
+  user-service:
+    image: chvald27/user-service:latest
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_NAME: webappdb
+    secrets:
+      - DB_PASSWORD
+      - SECRET_KEY
+    ports:
+      - "5000:5000"
+    networks:
+      - micro-net
+    deploy:
+      replicas: 2
+
+  auth-service:
+    image: chvald27/auth-service:latest
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_NAME: webappdb
+    secrets:
+      - DB_PASSWORD
+      - SECRET_KEY
+    ports:
+      - "5001:5000"
+    networks:
+      - micro-net
+    deploy:
+      replicas: 2
+
+  frontend:
+    image: chvald27/frontend:latest
+    ports:
+      - "8081:80"
+    networks:
+      - micro-net
+    deploy:
+      replicas: 2
+
+volumes:
+  postgres_data:
+
+secrets:
+  DB_PASSWORD:
+    external: true
+  SECRET_KEY:
+    external: true
+
+networks:
+  micro-net:

@@ -1,0 +1,21 @@
+replicaCount: 1
+
+images:
+  auth: YOURUSER/auth-service:latest
+  user: YOURUSER/user-service:latest
+  frontend: YOURUSER/frontend:latest
+  postgres: postgres:15-alpine
+
+postgres:
+  user: postgres
+  db: webappdb
+  password: DevOps2024*
+
+service:
+  frontend:
+    port: 80
+  user:
+    port: 5000
+  auth:
+    port: 5000
+
