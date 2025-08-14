@@ -1,76 +1,118 @@
-// ----------------------
-// API Endpoints
-// ----------------------
-const AUTH_API = "http://localhost:5001/api"; // auth backend
-const USER_API = "http://localhost:5000/api"; // users backend
+// Update these if you change ports or hostnames
+const AUTH_API = "http://localhost:5001/api";
+const USER_API = "http://localhost:5000/api";
 
-// ----------------------
-// Token Helpers
-// ----------------------
-function setToken(t) { localStorage.setItem("token", t); }
-function getToken() { return localStorage.getItem("token"); }
-function logout() { localStorage.removeItem("token"); location.href = "index.html"; }
+// --------------------
+// Token and Auth Utils
+// --------------------
+function setToken(t){ localStorage.setItem("token", t); }
+function getToken(){ return localStorage.getItem("token"); }
+function logout(){ localStorage.removeItem("token"); location.href = "/"; }
 
-// ----------------------
-// Dashboard Functions
-// ----------------------
-function fetchUsers() {
-  const token = getToken();
-  if (!token) return logout();
+// --------------------
+// DOMContentLoaded
+// --------------------
+document.addEventListener("DOMContentLoaded", () => {
 
-  fetch(USER_API + "/users", { headers: { "Authorization": "Bearer " + token }})
-    .then(r => r.json())
-    .then(data => showUsers(data))
-    .catch(err => console.error("Error fetching users:", err));
-}
+  // --- LOGIN PAGE ---
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = { username: fd.get("username"), password: fd.get("password") };
+      fetch(AUTH_API + "/login", {
+        method: "POST",
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.token) {
+          setToken(data.token);
+          localStorage.setItem("username", data.username);
+          location.href = "/dashboard.html";
+        } else {
+          document.getElementById("message").innerText = data.message || JSON.stringify(data);
+        }
+      });
+    });
+    return;
+  }
 
-function showUsers(data) {
-  const el = document.getElementById("users");
-  if (!Array.isArray(data)) { el.innerText = JSON.stringify(data); return; }
+  // --- DASHBOARD PAGE ---
+  if (location.pathname.endsWith("/dashboard.html")) {
+    const token = getToken();
+    const username = localStorage.getItem("username");
+    if (!token) return logout();
 
-  el.innerHTML = `
-    <table border="1" cellspacing="0" cellpadding="8">
-      <thead style="background:#007bff; color:white;">
-        <tr>
-          <th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${data.map(u => `
-          <tr>
-            <td>${u.id}</td>
-            <td>${u.username}</td>
-            <td>${u.email}</td>
-            <td>${u.role || "N/A"}</td>
-            <td>
-              <a href="/add_user.html?id=${u.id}">Edit</a>
-              <button onclick="deleteUser(${u.id})">Delete</button>
-            </td>
-          </tr>`).join("")}
-      </tbody>
-    </table>`;
-}
+    document.getElementById("logout").onclick = logout;
+    if (username) document.getElementById("welcome").innerText = "Welcome, " + username.toUpperCase();
 
-function deleteUser(id) {
-  const token = getToken();
-  if (!token) return logout();
+    fetch(USER_API + "/users", { headers: { "Authorization": "Bearer " + token }})
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById("users");
+        if (!Array.isArray(data)) return el.innerText = JSON.stringify(data);
 
-  if (!confirm("Are you sure you want to delete user ID " + id + "?")) return;
+        let table = `
+          <table border="1" cellspacing="0" cellpadding="8">
+            <thead style="background:#007bff; color:white;">
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(u => `
+                <tr>
+                  <td>${u.id}</td>
+                  <td>${u.username}</td>
+                  <td>${u.email}</td>
+                  <td>${u.role || ''}</td>
+                  <td>
+                    <a href="/add_user.html?id=${u.id}">Edit</a>
+                    <button onclick="deleteUser(${u.id})">Delete</button>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+        el.innerHTML = table;
+      });
+    return;
+  }
 
-  fetch(USER_API + `/users/${id}`, {
-    method: "DELETE",
-    headers: { 'Authorization': 'Bearer ' + token }
-  })
-  .then(r => r.json())
-  .then(() => fetchUsers())
-  .catch(err => console.error("Error deleting user:", err));
-}
+  // --- ADD / EDIT USER PAGE ---
+  const form = document.getElementById("userForm");
+  if (!form) return;
 
-window.deleteUser = deleteUser;
+  const userId = new URLSearchParams(window.location.search).get("id");
+  const title = document.getElementById("formTitle");
+  const submitBtn = document.getElementById("submitBtn");
 
-// ----------------------
-// Add/Edit User Functions
-// ----------------------
+  if (userId) {
+    title.innerText = "Edit User";
+    submitBtn.innerText = "Update User";
+    loadUserData(userId, form);
+  } else {
+    title.innerText = "Add New User";
+    submitBtn.innerText = "Add User";
+  }
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    saveUser(userId, form);
+  });
+});
+
+// --------------------
+// Functions: Load / Save / Delete
+// --------------------
 function loadUserData(userId, form) {
   const token = getToken();
   if (!token) return logout();
@@ -93,10 +135,8 @@ function saveUser(userId, form) {
 
   const fd = new FormData(form);
   const payload = { username: fd.get("username"), email: fd.get("email") };
-  const password = fd.get("password");
-  if (password) payload.password = password;
-  const role = fd.get("role");
-  if (role) payload.role = role;
+  if (fd.get("password")) payload.password = fd.get("password");
+  if (fd.get("role")) payload.role = fd.get("role");
 
   let url = USER_API + "/users";
   let method = "POST";
@@ -118,68 +158,21 @@ function saveUser(userId, form) {
   .catch(err => console.error("Error saving user:", err));
 }
 
-// ----------------------
-// Main Page Logic
-// ----------------------
-document.addEventListener("DOMContentLoaded", () => {
+function deleteUser(userId) {
+  const token = getToken();
+  if (!token) return logout();
 
-  // ---------- LOGIN ----------
-  if (document.getElementById("loginForm")) {
-    document.getElementById("loginForm").addEventListener("submit", e => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const payload = { username: fd.get("username"), password: fd.get("password") };
+  if (!confirm("Are you sure you want to delete this user?")) return;
 
-      fetch(AUTH_API + "/login", {
-        method: "POST",
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.token) {
-          setToken(data.token);
-          localStorage.setItem("username", data.username);
-          location.href = "dashboard.html";
-        } else {
-          document.getElementById("message").innerText = data.message || JSON.stringify(data);
-        }
-      })
-      .catch(err => console.error("Login error:", err));
-    });
-  }
-
-  // ---------- DASHBOARD ----------
-  if (document.getElementById("users")) {
-    const token = getToken();
-    if (!token) return logout();
-
-    const username = localStorage.getItem("username");
-    if (username) document.getElementById("welcome").innerText = "Welcome, " + username.toUpperCase();
-
-    const logoutBtn = document.getElementById("logout");
-    if (logoutBtn) logoutBtn.onclick = logout;
-
-    fetchUsers();
-  }
-
-  // ---------- ADD / EDIT USER ----------
-  if (document.getElementById("userForm")) {
-    const form = document.getElementById("userForm");
-    const userId = new URLSearchParams(window.location.search).get("id");
-    const title = document.getElementById("formTitle");
-
-    if (userId) {
-      title.innerText = "Edit User";
-      loadUserData(userId, form);
-    } else {
-      title.innerText = "Add New User";
-    }
-
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      saveUser(userId, form);
-    });
-  }
-
-});
+  fetch(USER_API + "/users/" + userId, {
+    method: "DELETE",
+    headers: { "Authorization":"Bearer " + token }
+  })
+  .then(r => r.json())
+  .then(data => {
+    alert(data.message);
+    location.reload();
+  })
+  .catch(err => console.error("Error deleting user:", err));
+}
+window.deleteUser = deleteUser;
