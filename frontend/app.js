@@ -8,6 +8,7 @@ function logout(){ localStorage.removeItem("token"); location.href = "/"; }
 
 if (location.pathname.endsWith("/dashboard.html")) {
   const token = getToken();
+
   if (!token) { location = "/"; }
   document.getElementById("logout").onclick = logout;
   fetch(USER_API + "/users", { headers: { "Authorization": "Bearer " + token }})
@@ -26,7 +27,9 @@ if (location.pathname.endsWith("/dashboard.html")) {
     const payload = { username: fd.get("username"), password: fd.get("password") };
     fetch(AUTH_API + "/login", { method: "POST", headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
       .then(r => r.json()).then(data => {
-        if (data.token) { setToken(data.token); location = "/dashboard.html"; }
+      console.log(data);
+        if (data.token) {setToken(data.token); location = "/dashboard.html"; }
+
         else document.getElementById("message").innerText = data.message || JSON.stringify(data);
       });
   });
