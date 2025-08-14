@@ -26,6 +26,6 @@ def login():
             current_app.config["SECRET_KEY"], algorithm="HS256"
         )
         print("token generated", token, flush=True)
-        return jsonify({"token": token})
+        return jsonify({"token": token, "username": username})
     return jsonify({"message": "Invalid credentials"}), 401
 
